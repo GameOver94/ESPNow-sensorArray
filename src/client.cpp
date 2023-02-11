@@ -15,13 +15,12 @@ extern "C"
 #include "macAddress.h"
 #include "sensor.h"
 
-
 SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
-state rtc_state;                //Structure to save state over deep sleep
-const uint8_t arraySize = 7;          // 4 for Status Messages + NR. of Sensor Values
-dataReading message[arraySize];     //Structure to save state sensor measurements
+state rtc_state;                // Structure to save state over deep sleep
+const uint8_t arraySize = 7;    // 4 for Status Messages + NR. of Sensor Values
+dataReading message[arraySize]; // Structure to save state sensor measurements
 unsigned long timeOut = 500;    // timeout after bord gets shut down after no acnolagement was received
-
+uint8_t retryCounter = 0;       // counter for transmision retries
 
 // Callback when data is sent
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
@@ -39,18 +38,31 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
         rtc_state.lastError = TRANSMISSION_ERROR;
     }
 
-    // Go into deep sleep
-    ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
+    if (retryCounter == 0 && rtc_state.lastError)
+    {
+        Log.noticeln("Retry Transmision");
+        retryCounter = 1;
+        delay(100);
+        esp_now_send(receiverMACAddress, (uint8_t *)&message, sizeof(message));
+    }
+    else
+    {
+        // Go into deep sleep
+        ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
 
-    Log.noticeln("Going into deep sleep");
-    if (rtc_state.errorCout < 5)
-        {
+        Log.noticeln("Going into deep sleep");
+        if (rtc_state.errorCout = 0){
             ESP.deepSleep(SLEEP_INTERVAL * 1e6);
+        }
+        else if (rtc_state.errorCout < 5)
+        {
+            ESP.deepSleep(60 * 1e6);
         }
         else
         {
-            ESP.deepSleep(SLEEP_INTERVAL * 6 * 1e6);
+            ESP.deepSleep(60 * 30 * 1e6);
         }
+    }
 }
 
 void setupESPnow()
@@ -97,7 +109,7 @@ void readSensor()
 {
     sensor.update();
     sensor.print();
-    
+
     message[4].property = TEMP_T;
     message[4].measurement = sensor.temperature();
 
@@ -114,12 +126,11 @@ void initMessage()
     message[0].property = CLIENT_ID_T;
     message[0].measurement = CLIENT_ID;
     Log.noticeln("ClientID: %i", (int)message[0].measurement);
-    
+
     rtc_state.messageID++;
     message[1].property = MESSAGE_ID_T;
     message[1].measurement = rtc_state.messageID;
     Log.noticeln("MessageID: %i", (int)message[1].measurement);
-    
 
     if (rtc_state.errorCout >= 3)
     {
@@ -138,9 +149,7 @@ void initMessage()
     Log.noticeln("Array Size: %i", (int)message[3].measurement);
 }
 
-
 // -------------------------------------------------------------------------------------------
-
 
 void setup()
 {
@@ -180,14 +189,16 @@ void loop()
         ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
 
         Log.noticeln("Going into deep sleep");
-
-        if (rtc_state.errorCout < 5)
-        {
+        if (rtc_state.errorCout = 0){
             ESP.deepSleep(SLEEP_INTERVAL * 1e6);
+        }
+        else if (rtc_state.errorCout < 5)
+        {
+            ESP.deepSleep(60 * 1e6);
         }
         else
         {
-            ESP.deepSleep(SLEEP_INTERVAL * 6 * 1e6);
+            ESP.deepSleep(60 * 30 * 1e6);
         }
     }
 }
