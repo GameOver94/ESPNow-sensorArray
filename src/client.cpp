@@ -49,9 +49,9 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
     {
         // Go into deep sleep
         ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
-
         Log.noticeln("Going into deep sleep");
-        if (rtc_state.errorCout = 0){
+
+        if (rtc_state.errorCout == 0){
             ESP.deepSleep(SLEEP_INTERVAL * 1e6);
         }
         else if (rtc_state.errorCout < 5)
@@ -189,7 +189,7 @@ void loop()
         ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
 
         Log.noticeln("Going into deep sleep");
-        if (rtc_state.errorCout = 0){
+        if (rtc_state.errorCout == 0){
             ESP.deepSleep(SLEEP_INTERVAL * 1e6);
         }
         else if (rtc_state.errorCout < 5)
