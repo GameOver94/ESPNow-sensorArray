@@ -14,21 +14,15 @@ extern "C"
 #include "data_structure.h"
 #include "sensor.h"
 
-struct state
-{
-    uint32_t messageID;
-    uint8_t errorCout;
-};
-
-state rtc_state;
 
 //MAC Address of the receiver
 //uint8_t broadcastAddress[] = {0x50, 0x02, 0x91, 0xFD, 0x37, 0x00};
 uint8_t broadcastAddress[] = {0x30, 0x83, 0x98, 0xB1, 0x05, 0xE4};
 
-SensorSi7021 sensor;
-
-unsigned long timeOut = 500; // timeout after bord gets shut down after no acnolagement was received
+SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
+state rtc_state;                //Structure to save state over deep sleep
+dataReading message[6];     //Structure to save state sensor measurements
+unsigned long timeOut = 500;    // timeout after bord gets shut down after no acnolagement was received
 
 
 // Callback when data is sent
@@ -38,11 +32,13 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
     {
         Log.noticeln("Last Packet Send Status: Delivery success");
         rtc_state.errorCout = 0;
+        rtc_state.lastError = OK;
     }
     else
     {
         Log.errorln("Last Packet Send Status: Delivery failed");
         rtc_state.errorCout++;
+        rtc_state.lastError = TRANSMISSION_ERROR;
     }
 
     // Go into deep sleep
@@ -55,7 +51,7 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
         }
         else
         {
-            ESP.deepSleep(SLEEP_INTERVAL * 5 * 1e6);
+            ESP.deepSleep(SLEEP_INTERVAL * 6 * 1e6);
         }
 }
 
@@ -99,24 +95,46 @@ float batteryVoltage()
     return batteryVoltage;
 }
 
-void updateData(struct_message &out_myData)
+void readSensor()
 {
-    rtc_state.messageID++;
-    out_myData.messageID = rtc_state.messageID;
-
-    if (rtc_state.errorCout)
-    {
-        out_myData.status = TRANSMISSION_ERROR;
-    }
-
-    struct_data sensorData;
     sensor.update();
     sensor.print();
-    sensorData = sensor.get();
-    out_myData.temperature = sensorData.temperature;
-    out_myData.humidity = sensorData.humidity;
-    out_myData.battery = batteryVoltage();
+    
+    message[3].property = TEMP_T;
+    message[3].measurement = sensor.temperature();
+
+    message[4].property = HUMIDITY_T;
+    message[4].measurement = sensor.humidity();
+
+    message[5].property = BAT_VOLTAGE_T;
+    message[5].measurement = batteryVoltage();
 }
+
+void initMessage()
+{
+    message[0].property = CLIENT_ID_T;
+    message[0].measurement = CLIENT_ID;
+    
+    rtc_state.messageID++;
+    message[1].property = MESSAGE_ID_T;
+    message[1].measurement = rtc_state.messageID;
+    
+
+    if (rtc_state.errorCout >= 3)
+    {
+        message[2].property = STATUS_T;
+        message[2].measurement = TRANSMISSION_ERROR;
+    }
+    else
+    {
+        message[2].property = STATUS_T;
+        message[2].measurement = OK;
+    }
+}
+
+
+// -------------------------------------------------------------------------------------------
+
 
 void setup()
 {
@@ -138,11 +156,11 @@ void setup()
     }
 
     // Set values to send
-    struct_message myData{CLIENT_ID, 0, 0, 0, 0, 0, 0, 0, 0, 0b00100011};
-    updateData(myData);
+    initMessage();
+    readSensor();
 
     // Send message via ESP-NOW
-    esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
+    esp_now_send(broadcastAddress, (uint8_t *)&message, sizeof(message));
 }
 
 void loop()
@@ -152,6 +170,7 @@ void loop()
         // Go into deep sleep
         Log.errorln("Connection timeout");
         rtc_state.errorCout++;
+        rtc_state.lastError = TRANSMISSION_ERROR;
         ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
 
         Log.noticeln("Going into deep sleep");
@@ -162,7 +181,7 @@ void loop()
         }
         else
         {
-            ESP.deepSleep(SLEEP_INTERVAL * 5 * 1e6);
+            ESP.deepSleep(SLEEP_INTERVAL * 6 * 1e6);
         }
     }
 }

@@ -6,27 +6,29 @@
 #define WIFI_ERROR 3
 #define MQTT_ERROR 4
 
-struct struct_message
+#define CLIENT_ID_T     0  // Client ID
+#define MESSAGE_ID_T    1  // Message ID
+#define STATUS_T        2  // Status
+#define TEMP_T          3  // Temperature
+#define TEMP2_T         4  // Temperature #2
+#define TEMP3_T         5  // Temperature #3
+#define HUMIDITY_T      6  // Relative Humidity
+#define PRESSURE_T      7  // Atmospheric Pressure
+#define R_PRESSURE_T    8  // Reduced Pressure
+#define SOIL_T          9  // Soil Moisture
+#define SOIL2_T         10 // Soil Moisture #2
+#define BAT_VOLTAGE_T   11 // Battery Voltage
+
+struct dataReading // Structure for saveing measurements
 {
-    uint32_t clientID;
+    float measurement;
+    uint8_t property;
+};
+
+struct state // Structure to save state over deep sleep
+{
     uint32_t messageID;
-
-    float temperature;
-    float humidity;
-    float pressure;
-    float r_pressure;
-    uint32_t pm25;
-    float battery;
-
-    uint8_t status;
-    uint8_t availableSensor; // Indicates the available Sensors: Form LSB --> temperature, humitity, pressure, r_pressure, pm25, battery
+    uint8_t lastError;
+    uint8_t errorCout;
 };
 
-struct struct_data
-{
-    float temperature;
-    float humidity;
-    float pressure;
-    float r_pressure;
-    uint32_t pm25;
-};

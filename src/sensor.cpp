@@ -45,8 +45,8 @@ bool SensorSi7021::update()
     Log.noticeln("---- Get Sensor Data ----");
     bool status = true;
 
-    m_data.humidity = m_si7021.readHumidity();
-    m_data.temperature = m_si7021.readTemperature();
+    m_temperature = m_si7021.readTemperature();
+    m_humidity = m_si7021.readHumidity();
 
     return status;
 }
@@ -55,12 +55,17 @@ void const SensorSi7021::print()
 {
     Log.noticeln("---- Print Sensor Data ----");
 
-    Log.noticeln("Temperature: %F °C", m_data.temperature);
-    Log.noticeln("Humidity: %F", m_data.humidity);
+    Log.noticeln("Temperature: %F °C", m_temperature);
+    Log.noticeln("Humidity: %F", m_humidity);
 
 }
 
-struct_data const SensorSi7021::get()
+float const SensorSi7021::temperature()
 {
-    return m_data;
+    return m_temperature;
+}
+
+float const SensorSi7021::humidity()
+{
+    return m_humidity;
 }
