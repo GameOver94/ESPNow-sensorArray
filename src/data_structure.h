@@ -8,7 +8,7 @@
 
 #define CLIENT_ID_T     0  // Client ID
 #define MESSAGE_ID_T    1  // Message ID
-#define STATUS_T        2  // Status
+#define STATUS_T        2  // Status                Last  digit status code seperated with 0, in front of it is the error count
 #define LENGTH_T        3  // Array Size
 #define TEMP_T          4  // Temperature
 #define TEMP2_T         5  // Temperature #2

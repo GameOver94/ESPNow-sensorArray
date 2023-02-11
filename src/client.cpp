@@ -51,16 +51,13 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
         ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
         Log.noticeln("Going into deep sleep");
 
-        if (rtc_state.errorCout == 0){
-            ESP.deepSleep(SLEEP_INTERVAL * 1e6);
-        }
-        else if (rtc_state.errorCout < 5)
+        if (rtc_state.errorCout != 0 && rtc_state.errorCout < 5)
         {
             ESP.deepSleep(60 * 1e6);
         }
         else
         {
-            ESP.deepSleep(60 * 30 * 1e6);
+            ESP.deepSleep(SLEEP_INTERVAL * 1e6);
         }
     }
 }
@@ -135,12 +132,12 @@ void initMessage()
     if (rtc_state.errorCout >= 3)
     {
         message[2].property = STATUS_T;
-        message[2].measurement = TRANSMISSION_ERROR;
+        message[2].measurement = TRANSMISSION_ERROR + rtc_state.errorCout * 100;
     }
     else
     {
         message[2].property = STATUS_T;
-        message[2].measurement = OK;
+        message[2].measurement = OK + rtc_state.errorCout * 100;
     }
     Log.noticeln("Status: %i", (int)message[2].measurement);
 

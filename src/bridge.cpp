@@ -110,16 +110,16 @@ static void OnDataRecv(dataReading (&incomingReadings)[32])
   
   Log.noticeln("");
 
-
-  if ((int)incomingReadings[2].measurement)
+int errorCode = (int)incomingReadings[2].measurement % 10;
+  if (errorCode)
   {
-    if ((int)incomingReadings[2].measurement == TRANSMISSION_ERROR)  // A previous transmission from the sensor had an error | execute error handler and then send the data
+    if (errorCode == TRANSMISSION_ERROR)  // A previous transmission from the sensor had an error | execute error handler and then send the data
     {
-      error_hander((int)incomingReadings[2].measurement);
+      error_hander(errorCode);
     }
     else
     {
-      error_hander((int)incomingReadings[2].measurement);  // A error other than a transmision error occured | execute the error handler and do NOT send the data
+      error_hander(errorCode);  // A error other than a transmision error occured | execute the error handler and do NOT send the data
       return;
     }
   }
