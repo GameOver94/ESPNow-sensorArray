@@ -18,6 +18,6 @@ public:
     void init();
     void loop();
     void sendStatus();
-    void sendData(struct_message &measurement);
-    void sendSensorError(const uint8_t errorCode);
+    void sendData(dataReading (&measurement)[32]);
+    void sendError(const uint8_t errorCode);
 };

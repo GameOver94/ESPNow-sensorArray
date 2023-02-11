@@ -1,7 +1,6 @@
 #include "network.h"
 
 #include <WiFi.h>
-#include <bitset>
 
 #include <EspMQTTClient.h>
 #include <ArduinoJson.h>
@@ -43,12 +42,12 @@ void NetCom::sendStatus()
     else
     {
         Log.noticeln("Publishing status failed.");
-        //errorHandler();
+        sendError(MQTT_ERROR);
     }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-void NetCom::sendData(struct_message &measurement)
+void NetCom::sendData(dataReading (&measurement)[32])
 {
     StaticJsonDocument<256> JSONMeasurement;
     char buffer[256];
@@ -57,48 +56,18 @@ void NetCom::sendData(struct_message &measurement)
 
     // build Json Object
     char clientStr[9];
-    snprintf(clientStr, sizeof(clientStr), "%08x", measurement.clientID);
+    snprintf(clientStr, sizeof(clientStr), "%08x", (int)measurement[0].measurement);
     JSONMeasurement["clientID"] = clientStr;
-    JSONMeasurement["messageID"] = measurement.messageID;
+    JSONMeasurement["messageID"] = (int)measurement[1].measurement;
+    JSONMeasurement["status"] = (int)measurement[2].measurement;
 
-    std::bitset<8> available(measurement.availableSensor);
 
-    for (uint8_t i = 0; i < 8; i++)
+    int arraySize = (int)measurement[3].measurement;
+    for (int i = 4; i < arraySize; i++)
     {
-        if (available[i])
-        {
-            switch (i)
-            {
-            case 0: //temperaure
-                JSONMeasurement["temperature"] = measurement.temperature;
-                break;
-
-            case 1: //humidity
-                JSONMeasurement["humidity"] = measurement.humidity;
-                break;
-
-            case 2: //pressure
-                JSONMeasurement["pressure"] = measurement.pressure;
-                break;
-
-            case 3: //reduced pressure
-                JSONMeasurement["reduced pressure"] = measurement.r_pressure;
-                break;
-
-            case 4: //pm25
-                JSONMeasurement["pm25"] = measurement.pm25;
-                break;
-
-            case 5: //pm25
-                JSONMeasurement["battery voltage"] = measurement.battery;
-                break;
-
-            default:
-                //errorHandler();
-                break;
-            }
-        }
+        JSONMeasurement[sensorproperty[measurement[i].property]] = measurement[i].measurement;
     }
+
 
     serializeJson(JSONMeasurement, buffer);
     bool MQTTstatus = m_MQTTclient.publish(m_measurementTopic, buffer);
@@ -110,12 +79,12 @@ void NetCom::sendData(struct_message &measurement)
     else
     {
         Log.noticeln("Faild to send message.");
-        //errorHandler()
+        sendError(MQTT_ERROR);
     }
 }
 
 //-------------------------------------------------------------------------------------------------------------------
-void NetCom::sendSensorError(const uint8_t errorCode)
+void NetCom::sendError(const uint8_t errorCode)
 {
     bool MQTTstatus = false;
 

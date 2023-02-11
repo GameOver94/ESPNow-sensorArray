@@ -20,9 +20,8 @@
 #include "network.h"
 
 // globale Variablen
-static uint32_t statusPublishPreviousMillis = 0;
-//static SensorBMP280 sensor;
-static NetCom netCom((char *)SSID, (char *)PASSWORD, (char *)BROKER_IP, (char *)DEVICE_NAME, 1883);
+static uint32_t statusPublishPreviousMillis = 0;  //satus variave for asyncronus execution
+static NetCom netCom((char *)SSID, (char *)PASSWORD, (char *)BROKER_IP, (char *)DEVICE_NAME, 1883);  //handls all the networking
 SerialTransfer myTransfer;
 
 // function Prototypes
@@ -30,7 +29,7 @@ void onConnectionEstablished();
 static void error_hander(const uint8_t errorCode);
 static void bootMessage();
 static void asyncHandler(const uint16_t interval);
-static void OnDataRecv(struct_message &incomingReadings);
+static void OnDataRecv(dataReading (&incomingReadings)[32]);
 static void serialHandler();
 
 
@@ -93,31 +92,34 @@ static void asyncHandler(const uint16_t interval)
 
 
 
-static void OnDataRecv(struct_message &incomingReadings)
+static void OnDataRecv(dataReading (&incomingReadings)[32])
 {
   char clientStr[9];
-  snprintf(clientStr, sizeof(clientStr), "%08x", incomingReadings.clientID);
+  snprintf(clientStr, sizeof(clientStr), "%08x", (int)incomingReadings[0].measurement);
 
   Log.noticeln("");
   Log.noticeln("---- Print Received Data ----");
-  Log.noticeln("Client ID: %s, Message ID: %i", clientStr, incomingReadings.messageID);
-  Log.noticeln("Status: %i", incomingReadings.status);
-  Log.noticeln("Temperature: %F °C", incomingReadings.temperature);
-  Log.noticeln("Humidity: %F", incomingReadings.humidity);
-  Log.noticeln("Pressure: %F mbar", incomingReadings.pressure);
-  Log.noticeln("Reduced pressure: %F mbar", incomingReadings.r_pressure);
-  Log.noticeln("PM2,5 conentration: %i ug/m3", incomingReadings.pm25);
-  Log.noticeln("Battery Voltage %F V", incomingReadings.battery);
+  Log.noticeln("Client ID: %s, Message ID: %i", clientStr, (int)incomingReadings[1].measurement);
+  Log.noticeln("Status: %i", (int)incomingReadings[2].measurement);
 
-  if (incomingReadings.status)
+  int arraySize = (int)incomingReadings[3].measurement;
+  for (int i = 4; i < arraySize; i++)
   {
-    if (incomingReadings.status == 1)
+      Log.noticeln("Proerty ID: %i, Measurement: %F", incomingReadings[i].property, incomingReadings[i].measurement);
+  }
+  
+  Log.noticeln("");
+
+
+  if ((int)incomingReadings[2].measurement)
+  {
+    if ((int)incomingReadings[2].measurement == TRANSMISSION_ERROR)  // A previous transmission from the sensor had an error | execute error handler and then send the data
     {
-      error_hander(incomingReadings.status);
+      error_hander((int)incomingReadings[2].measurement);
     }
     else
     {
-      error_hander(incomingReadings.status);
+      error_hander((int)incomingReadings[2].measurement);  // A error other than a transmision error occured | execute the error handler and do NOT send the data
       return;
     }
   }
@@ -127,7 +129,7 @@ static void OnDataRecv(struct_message &incomingReadings)
 
 static void serialHandler()
 {
-  static struct_message incommingData;
+  static dataReading incommingData[32];  // Buffer for incoming Data / max 32 measurements
 
   if (myTransfer.available())
   {
@@ -166,5 +168,5 @@ static void error_hander(const uint8_t errorCode)
     Log.errorln("Unkonwn error code");
   }
 
-  netCom.sendSensorError(errorCode);
+  netCom.sendError(errorCode);
 }

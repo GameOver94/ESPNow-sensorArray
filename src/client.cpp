@@ -12,6 +12,7 @@ extern "C"
 #include <ArduinoLog.h>
 
 #include "data_structure.h"
+#include "macAddress.h"
 #include "sensor.h"
 
 

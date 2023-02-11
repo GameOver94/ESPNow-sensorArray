@@ -20,6 +20,9 @@
 #define SOIL2_T         11 // Soil Moisture #2
 #define BAT_VOLTAGE_T   12 // Battery Voltage
 
+// keep in sync with previous list
+const String sensorproperty[] = {"clientID", "messageID", "status", "lenght", "temperature", "temperature2", "temperature3", "humidity", "pressure", "r_pressure", "s_moisture", "s_moisture2", "battery"};
+
 struct dataReading // Structure for saveing measurements
 {
     float measurement;
@@ -33,9 +36,3 @@ struct state // Structure to save state over deep sleep
     uint8_t errorCout;
 };
 
-/* Set the MAC Address of the receiver
-    the Client and the receiver have to be compliled with the same MAC Address
-    if you have more than one receiver comple the client with the MAC Address of the nearest receiver
-*/
-//uint8_t receiverMACAddress[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};  // test receiver
-uint8_t receiverMACAddress[] = {0x6e, 0x5f, 0x5b, 0x7d, 0x69, 0xae};

@@ -5,6 +5,7 @@
 #include <SerialTransfer.h>
 
 #include "data_structure.h"
+#include "macAddress.h"
 
 // globale Variablen
 SerialTransfer myTransfer;         // Initialize Class for transfer data over Serial
