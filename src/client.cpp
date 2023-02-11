@@ -15,13 +15,10 @@ extern "C"
 #include "sensor.h"
 
 
-//MAC Address of the receiver
-//uint8_t broadcastAddress[] = {0x50, 0x02, 0x91, 0xFD, 0x37, 0x00};
-uint8_t broadcastAddress[] = {0x30, 0x83, 0x98, 0xB1, 0x05, 0xE4};
-
 SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
 state rtc_state;                //Structure to save state over deep sleep
-dataReading message[6];     //Structure to save state sensor measurements
+const uint8_t arraySize = 7;          // 4 for Status Messages + NR. of Sensor Values
+dataReading message[arraySize];     //Structure to save state sensor measurements
 unsigned long timeOut = 500;    // timeout after bord gets shut down after no acnolagement was received
 
 
@@ -73,7 +70,7 @@ void setupESPnow()
     esp_now_register_send_cb(OnDataSent);
 
     // Register peer
-    if (esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0) != 0)
+    if (esp_now_add_peer(receiverMACAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0) != 0)
     {
         Log.errorln("Pairing failed");
     };
@@ -100,24 +97,27 @@ void readSensor()
     sensor.update();
     sensor.print();
     
-    message[3].property = TEMP_T;
-    message[3].measurement = sensor.temperature();
+    message[4].property = TEMP_T;
+    message[4].measurement = sensor.temperature();
 
-    message[4].property = HUMIDITY_T;
-    message[4].measurement = sensor.humidity();
+    message[5].property = HUMIDITY_T;
+    message[5].measurement = sensor.humidity();
 
-    message[5].property = BAT_VOLTAGE_T;
-    message[5].measurement = batteryVoltage();
+    message[6].property = BAT_VOLTAGE_T;
+    message[6].measurement = batteryVoltage();
 }
 
 void initMessage()
 {
+    Log.noticeln("---- Prepair Message Header ----");
     message[0].property = CLIENT_ID_T;
     message[0].measurement = CLIENT_ID;
+    Log.noticeln("ClientID: %i", (int)message[0].measurement);
     
     rtc_state.messageID++;
     message[1].property = MESSAGE_ID_T;
     message[1].measurement = rtc_state.messageID;
+    Log.noticeln("MessageID: %i", (int)message[1].measurement);
     
 
     if (rtc_state.errorCout >= 3)
@@ -130,6 +130,11 @@ void initMessage()
         message[2].property = STATUS_T;
         message[2].measurement = OK;
     }
+    Log.noticeln("Status: %i", (int)message[2].measurement);
+
+    message[3].property = LENGTH_T;
+    message[3].measurement = arraySize;
+    Log.noticeln("Array Size: %i", (int)message[3].measurement);
 }
 
 
@@ -160,7 +165,7 @@ void setup()
     readSensor();
 
     // Send message via ESP-NOW
-    esp_now_send(broadcastAddress, (uint8_t *)&message, sizeof(message));
+    esp_now_send(receiverMACAddress, (uint8_t *)&message, sizeof(message));
 }
 
 void loop()
