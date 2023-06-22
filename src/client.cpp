@@ -15,9 +15,11 @@ extern "C"
 #include "macAddress.h"
 #include "sensor.h"
 
-SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
+//SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
+//SensorDHT22 sensor(2,DHT22);
+SensorBMP280 sensor;
 state rtc_state;                // Structure to save state over deep sleep
-const uint8_t arraySize = 7;    // 4 for Status Messages + NR. of Sensor Values
+const uint8_t arraySize = 6;    // 4 for Status Messages + NR. of Sensor Values + battery Voltage
 dataReading message[arraySize]; // Structure to save state sensor measurements
 unsigned long timeOut = 500;    // timeout after bord gets shut down after no acnolagement was received
 uint8_t retryCounter = 0;       // counter for transmision retries
@@ -110,11 +112,14 @@ void readSensor()
     message[4].property = TEMP_T;
     message[4].measurement = sensor.temperature();
 
-    message[5].property = HUMIDITY_T;
-    message[5].measurement = sensor.humidity();
+    //message[5].property = HUMIDITY_T;
+    //message[5].measurement = sensor.humidity();
 
-    message[6].property = BAT_VOLTAGE_T;
-    message[6].measurement = batteryVoltage();
+    //message[5].property = R_PRESSURE_T;
+    //message[5].measurement = sensor.reducedPressure();
+
+    message[5].property = BAT_VOLTAGE_T;
+    message[5].measurement = batteryVoltage();
 }
 
 void initMessage()
