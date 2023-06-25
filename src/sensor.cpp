@@ -180,6 +180,7 @@ bool SensorBMP280::init()
     return false;
 }
 
+//default humidity 50% for calculaiton of reduced pressure
 bool SensorBMP280::update()
 {
     Log.noticeln("");
@@ -191,6 +192,33 @@ bool SensorBMP280::update()
     {
         float temp = m_bmp.readTemperature();
         float hum = 50.0F;
+        float pres = m_bmp.readPressure();
+
+        m_temperature = temp;
+        m_pressure = pres/100;
+        m_reducedPressure = compensateAltitude(temp, hum, pres);
+        return true;
+    }
+    else
+    {
+        Log.errorln("Error reading sensor data");
+        return false;
+    }
+
+    return status;
+}
+
+//uses given humidity level for calculation of the reduced pressure
+bool SensorBMP280::update(float hum)
+{
+    Log.noticeln("");
+    Log.noticeln("---- Get Sensor Data ----");
+
+    uint8_t status = m_bmp.getStatus();
+
+    if (status == 0)
+    {
+        float temp = m_bmp.readTemperature();
         float pres = m_bmp.readPressure();
 
         m_temperature = temp;
@@ -238,6 +266,108 @@ float const SensorBMP280::pressure()
 }
 
 float const SensorBMP280::reducedPressure()
+{
+    return m_reducedPressure;
+}
+
+
+//--------------------------------------------------------------------------------------------------------
+SensorBME280::SensorBME280()
+    : m_bme()
+{
+}
+
+bool SensorBME280::init()
+{
+    Log.noticeln("---- Setup Sensor ----");
+
+    bool status;
+    status = m_bme.begin();
+
+    if (!status)
+    {
+        Log.errorln("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
+        return false;
+    }
+    else
+    {
+        m_bme.setSampling(Adafruit_BME280::MODE_NORMAL,
+                          Adafruit_BME280::SAMPLING_X4, // temperature
+                          Adafruit_BME280::SAMPLING_X4, //humidity,
+                          Adafruit_BME280::SAMPLING_X16, // pressure
+                          Adafruit_BME280::FILTER_X16,
+                          Adafruit_BME280::STANDBY_MS_1000);
+        Log.noticeln("BME setup successfull");
+        return true;
+    }
+    return false;
+}
+
+bool SensorBME280::update()
+{
+    Log.noticeln("");
+    Log.noticeln("---- Get Sensor Data ----");
+
+    uint8_t status = m_bme.init();
+
+    if (status == 1)
+    {
+        float temp = m_bme.readTemperature();
+        float hum = m_bme.readHumidity();
+        float pres = m_bme.readPressure();
+
+        m_temperature = temp;
+        m_humidity = hum;
+        m_pressure = pres/100;
+        m_reducedPressure = compensateAltitude(temp, hum, pres);
+        return true;
+    }
+    else
+    {
+        Log.errorln("Error reading sensor data");
+        return false;
+    }
+
+    return status;
+}
+
+float SensorBME280::compensateAltitude(float &temp, float &hum, float &pres)
+{
+    float p_s(NAN), E(NAN), p_r(NAN);
+    p_s = pow(10, m_A - m_B / (m_C + temp));
+    E = hum / 100 * p_s;
+
+    p_r = pres / 100 * exp(m_g * m_h / (m_R * (temp + 273.15 + m_C_h * E + m_alpha * m_h / 2)));
+    return p_r;
+}
+
+void const SensorBME280::print()
+{
+    Log.noticeln("");
+    Log.noticeln("---- Print Sensor Data ----");
+
+    Log.noticeln("Temperature: %F °C", m_temperature);
+    Log.noticeln("Humidity: %F %%", m_humidity);
+    Log.noticeln("Pressure: %F mbar", m_pressure);
+    Log.noticeln("Reduced pressure: %F mbar", m_reducedPressure);
+}
+
+float const SensorBME280::temperature()
+{
+    return m_temperature;
+}
+
+float const SensorBME280::humidity()
+{
+    return m_humidity;
+}
+
+float const SensorBME280::pressure()
+{
+    return m_pressure;
+}
+
+float const SensorBME280::reducedPressure()
 {
     return m_reducedPressure;
 }

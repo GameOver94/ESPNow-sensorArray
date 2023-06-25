@@ -16,13 +16,15 @@ extern "C"
 #include "sensor.h"
 
 //SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
-//SensorDHT22 sensor(2,DHT22);
-SensorBMP280 sensor;
+//SensorDHT22 t_sensor(2, DHT22);
+SensorBME280 sensor;
 state rtc_state;                // Structure to save state over deep sleep
-const uint8_t arraySize = 6;    // 4 for Status Messages + NR. of Sensor Values + battery Voltage
+const uint8_t arraySize = 9;    // 4 for Status Messages + NR. of Sensor Values + battery Voltage
 dataReading message[arraySize]; // Structure to save state sensor measurements
 unsigned long timeOut = 500;    // timeout after bord gets shut down after no acnolagement was received
 uint8_t retryCounter = 0;       // counter for transmision retries
+
+
 
 // Callback when data is sent
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
@@ -106,20 +108,28 @@ float batteryVoltage()
 
 void readSensor()
 {
-    sensor.update();
+    if (!sensor.update()) {
+        if(!sensor.update()){
+            Log.errorln("Sensor Error");
+            //Error Handler
+        }
+    };
     sensor.print();
 
     message[4].property = TEMP_T;
     message[4].measurement = sensor.temperature();
 
-    //message[5].property = HUMIDITY_T;
-    //message[5].measurement = sensor.humidity();
+    message[5].property = HUMIDITY_T;
+    message[5].measurement = sensor.humidity();
 
-    //message[5].property = R_PRESSURE_T;
-    //message[5].measurement = sensor.reducedPressure();
+    message[6].property = PRESSURE_T;
+    message[6].measurement = sensor.pressure();
 
-    message[5].property = BAT_VOLTAGE_T;
-    message[5].measurement = batteryVoltage();
+    message[7].property = R_PRESSURE_T;
+    message[7].measurement = sensor.reducedPressure();
+
+    message[8].property = BAT_VOLTAGE_T;
+    message[8].measurement = batteryVoltage();
 }
 
 void initMessage()
