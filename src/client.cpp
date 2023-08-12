@@ -15,16 +15,14 @@ extern "C"
 #include "macAddress.h"
 #include "sensor.h"
 
-//SensorSi7021 sensor;            // Initiate sensor class / select connected Sensor
-//SensorDHT22 t_sensor(2, DHT22);
-SensorBME280 sensor;
+SensorSi7021 sensor1; // Initiate sensor class / select connected Sensor
+// SensorDHT22 t_sensor(2, DHT22);
+SensorBMP180 sensor2;
 state rtc_state;                // Structure to save state over deep sleep
-const uint8_t arraySize = 9;    // 4 for Status Messages + NR. of Sensor Values + battery Voltage
+const uint8_t arraySize = 10;   // 4 for Status Messages + NR. of Sensor Values + battery Voltage
 dataReading message[arraySize]; // Structure to save state sensor measurements
 unsigned long timeOut = 500;    // timeout after bord gets shut down after no acnolagement was received
 uint8_t retryCounter = 0;       // counter for transmision retries
-
-
 
 // Callback when data is sent
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus)
@@ -108,28 +106,38 @@ float batteryVoltage()
 
 void readSensor()
 {
-    if (!sensor.update()) {
-        if(!sensor.update()){
-            Log.errorln("Sensor Error");
-            //Error Handler
-        }
-    };
-    sensor.print();
+    if (!sensor1.update())
+    {
+
+        Log.errorln("Sensor Error");
+        // Error Handler
+    }
+    sensor1.print();
+
+    if (!sensor2.update(sensor1.humidity()))
+    {
+        Log.errorln("Sensor Error");
+        // Error Handler
+    }
+    sensor2.print();
 
     message[4].property = TEMP_T;
-    message[4].measurement = sensor.temperature();
+    message[4].measurement = sensor1.temperature();
 
     message[5].property = HUMIDITY_T;
-    message[5].measurement = sensor.humidity();
+    message[5].measurement = sensor1.humidity();
 
-    message[6].property = PRESSURE_T;
-    message[6].measurement = sensor.pressure();
+    message[6].property = TEMP2_T;
+    message[6].measurement = sensor2.temperature();
 
-    message[7].property = R_PRESSURE_T;
-    message[7].measurement = sensor.reducedPressure();
+    message[7].property = PRESSURE_T;
+    message[7].measurement = sensor2.pressure();
 
-    message[8].property = BAT_VOLTAGE_T;
-    message[8].measurement = batteryVoltage();
+    message[8].property = R_PRESSURE_T;
+    message[8].measurement = sensor2.reducedPressure();
+
+    message[9].property = BAT_VOLTAGE_T;
+    message[9].measurement = batteryVoltage();
 }
 
 void initMessage()
@@ -173,7 +181,8 @@ void setup()
     Log.noticeln("\n\nWake up: %s\n", ESP.getResetReason().c_str());
 
     setupESPnow();
-    sensor.init();
+    sensor1.init();
+    sensor2.init();
 
     if (resetInfo.reason == REASON_DEEP_SLEEP_AWAKE)
     {
@@ -201,7 +210,8 @@ void loop()
         ESP.rtcUserMemoryWrite(0, (uint32_t *)&rtc_state, sizeof(rtc_state));
 
         Log.noticeln("Going into deep sleep");
-        if (rtc_state.errorCout == 0){
+        if (rtc_state.errorCout == 0)
+        {
             ESP.deepSleep(SLEEP_INTERVAL * 1e6);
         }
         else if (rtc_state.errorCout < 5)
